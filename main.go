@@ -1,21 +1,26 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
-	"github.com/urfave/cli"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-var verboseMode = false
+var verboseMode bool
 
-var OptionFlags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "verbose, V",
-		Usage: "verbose mode",
-	},
+type Options struct {
+	verbose bool
+}
+
+func parse_option() *Options {
+	ret := &Options{}
+	flag.BoolVar(&ret.verbose, "verbose, V", false, "verbose mode")
+	flag.Parse()
+	return ret
 }
 
 func execute(tool string, params []string, debug bool) string {
@@ -114,28 +119,21 @@ func git_branch_export(branch, dest string) {
 	}
 }
 
-func entry(c *cli.Context) error {
-	if c.NArg() < 2 {
-		return cli.NewExitError("please specify branch and export path", 86)
+func entry(opt *Options) error {
+	if len(os.Args) < 2 {
+		return errors.New("please specify branch and export path")
 	}
-	branch := c.Args()[0]
-	dest_root := c.Args()[1]
+	branch := os.Args[1]
+	dest_root := os.Args[2]
 	fmt.Printf(">> branch[%s] export to [%s]\n", branch, dest_root)
 
-	verboseMode = c.GlobalBool("verbose")
+	verboseMode = opt.verbose
 	git_branch_export(branch, dest_root)
 
 	return nil
 }
 
 func main() {
-	app := cli.NewApp()
-	app.Name = "git-branch-export"
-	app.Usage = "branch's diff exporter to specified path"
-	app.Version = "1.0.0"
-	app.Commands = nil
-	app.Action = entry
-	app.Flags = OptionFlags
-
-	app.Run(os.Args)
+	opt := parse_option()
+	entry(opt)
 }
